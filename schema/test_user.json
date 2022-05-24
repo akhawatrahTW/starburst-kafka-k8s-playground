@@ -1,0 +1,33 @@
+{
+  "tableName": "test.proto.user",
+  "schemaName": "default",
+  "topicName": "test.proto.user",
+  "key": {
+    "dataFormat": "raw",
+    "fields": [
+      {
+        "name": "kafka_key",
+        "type": "VARCHAR",
+        "hidden": "false"
+      }
+    ]
+  },
+  "message": {
+    "dataFormat": "protobuf",
+    "dataSchema": "/schema/user.proto",
+    "fields": [
+      {
+        "name": "profile_id",
+        "type": "INTEGER",
+        "mapping": "profile_id",
+        "hidden": "false"
+      },
+      {
+        "name": "user_name",
+        "type": "VARCHAR",
+        "mapping": "user_name",
+        "hidden": "false"
+      }
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-data-generator
+  namespace: starburst-playground
+  labels:
+    app: test-data-generator
+spec:
+  selector:
+    matchLabels:
+      namespace: starburst-playground
+      app: test-data-generator
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        namespace: starburst-playground
+        app: test-data-generator
+    spec:
+      # wait until the kafka cluster is ready, not sure if it is better to wait for the broker instead
+      initContainers:
+        - name: init
+          image: gcr.io/spiffe-io/wait-for-it
+          args: [ "-t", "0", "schema-registry:8081" ]
+      containers:
+        - name: test-data-generator
+          image: python:3.6.15-slim-buster
+          command: [ "/bin/sh","-c" ]
+          args: [ "python -m pip install -r /test-data/requirements.txt; python /test-data/producer.py" ]
+          volumeMounts:
+            - name: test-data
+              mountPath: /test-data
+          resources:
+            { }
+      volumes:
+        - name: test-data
+          configMap:
+            name: test-data

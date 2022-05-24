@@ -1,0 +1,35 @@
+{
+  "tableName": "test.json.recipient",
+  "schemaName": "default",
+  "topicName": "test.json.recipient",
+  "key": {
+    "dataFormat": "raw",
+    "fields": [
+      {
+        "name": "kafka_key",
+        "type": "INTEGER",
+        "hidden": "false"
+      }
+    ]
+  },
+  "message": {
+    "dataFormat": "json",
+    "fields": [
+      {
+        "name": "id",
+        "mapping": "id",
+        "type": "INTEGER"
+      },
+      {
+        "name": "name",
+        "mapping": "name",
+        "type": "VARCHAR"
+      },
+      {
+        "name": "address",
+        "mapping": "address",
+        "type": "VARCHAR"
+      }
+    ]
+  }
+}

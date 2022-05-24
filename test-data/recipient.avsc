@@ -1,0 +1,20 @@
+{
+  "namespace": "test.avro",
+  "type": "record",
+  "name": "Recipient",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "address",
+      "type": "string"
+    }
+  ]
+}
+

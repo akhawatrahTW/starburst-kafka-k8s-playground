@@ -1,0 +1,264 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starburst-catalog
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+data:
+  kafka.properties: |
+    connector.name=kafka
+    kafka.nodes=kafka:9092
+    kafka.hide-internal-columns=false
+    kafka.table-description-supplier=CONFLUENT
+    kafka.confluent-schema-registry-url=http://schema-registry:8081
+  kafka_proto.properties: |
+    connector.name=kafka
+    kafka.nodes=kafka:9092
+    kafka.hide-internal-columns=false
+    kafka.table-names=test.proto.user
+    kafka.table-description-dir=/schema
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starburst-coordinator
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+    component: coordinator
+data:
+  node.properties: |
+    node.environment=local
+    node.data-dir=/data/starburst
+    plugin.dir=/usr/lib/starburst/plugin
+
+  jvm.config: |
+    -server
+    -Xmx8G
+    -XX:+UseG1GC
+    -XX:G1HeapRegionSize=32M
+    -XX:+UseGCOverheadLimit
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+ExitOnOutOfMemoryError
+    -Djdk.attach.allowAttachSelf=true
+    -XX:-UseBiasedLocking
+    -XX:ReservedCodeCacheSize=512M
+    -XX:PerMethodRecompilationCutoff=10000
+    -XX:PerBytecodeRecompilationCutoff=10000
+    -Djdk.nio.maxCachedBufferSize=2000000
+
+  config.properties: |
+    coordinator=true
+    node-scheduler.include-coordinator=false
+    http-server.http.port=8080
+    query.max-memory=4GB
+    query.max-memory-per-node=1GB
+    memory.heap-headroom-per-node=1GB
+    discovery-server.enabled=true
+    discovery.uri=http://localhost:8080
+
+  log.properties: |
+    io.trino=DEBUG
+
+# Replace value with a valid starburst license
+  starburstdata.license: |
+    {"owner":"no-license","expiry":"2099-01-01T00:00:00","features":[]}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: starburst-worker
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+    component: worker
+data:
+  node.properties: |
+    node.environment=local
+    node.data-dir=/data/starburst
+    plugin.dir=/usr/lib/starburst/plugin
+
+  jvm.config: |
+    -server
+    -Xmx8G
+    -XX:+UseG1GC
+    -XX:G1HeapRegionSize=32M
+    -XX:+UseGCOverheadLimit
+    -XX:+ExplicitGCInvokesConcurrent
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+ExitOnOutOfMemoryError
+    -Djdk.attach.allowAttachSelf=true
+    -XX:-UseBiasedLocking
+    -XX:ReservedCodeCacheSize=512M
+    -XX:PerMethodRecompilationCutoff=10000
+    -XX:PerBytecodeRecompilationCutoff=10000
+    -Djdk.nio.maxCachedBufferSize=2000000
+
+  config.properties: |
+    coordinator=false
+    http-server.http.port=8080
+    query.max-memory=4GB
+    query.max-memory-per-node=1GB
+    memory.heap-headroom-per-node=1GB
+    discovery.uri=http://starburst-coordinator:8080
+
+  log.properties: |
+    io.trino=DEBUG
+
+# Replace value with a valid starburst license
+  starburstdata.license: |
+    {"owner":"no-license","expiry":"2099-01-01T00:00:00","features":[]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: starburst-coordinator
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: starburst
+    component: coordinator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starburst-coordinator
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+    component: coordinator
+spec:
+  selector:
+    matchLabels:
+      app: starburst
+      component: coordinator
+  template:
+    metadata:
+      labels:
+        app: starburst
+        component: coordinator
+    spec:
+      serviceAccountName: default
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      volumes:
+        - name: config-volume
+          configMap:
+            name: starburst-coordinator
+        - name: catalog-volume
+          configMap:
+            name: starburst-catalog
+        - name: schema
+          configMap:
+            name: schema
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: starburst-coordinator
+          image: starburstdata/starburst-enterprise:370-e.3
+          imagePullPolicy: IfNotPresent
+          env:
+            []
+          volumeMounts:
+            - mountPath: /etc/starburst
+              name: config-volume
+            - mountPath: /etc/starburst/catalog
+              name: catalog-volume
+            - name: schema
+              mountPath: /schema
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 50
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 50
+          resources:
+            {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: starburst-worker
+  namespace: starburst-playground
+  labels:
+    namespace: starburst-playground
+    app: starburst
+    component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: starburst
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: starburst
+        component: worker
+    spec:
+      serviceAccountName: default
+      volumes:
+        - name: config-volume
+          configMap:
+            name: starburst-worker
+        - name: catalog-volume
+          configMap:
+            name: starburst-catalog
+        - name: schema
+          configMap:
+            name: schema
+      imagePullSecrets:
+        - name: registry-credentials
+      containers:
+        - name: starburst-worker
+          image: starburstdata/starburst-enterprise:370-e.3
+          imagePullPolicy: IfNotPresent
+          env:
+            []
+          volumeMounts:
+            - mountPath: /etc/starburst
+              name: config-volume
+            - mountPath: /etc/starburst/catalog
+              name: catalog-volume
+            - name: schema
+              mountPath: /schema
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 50
+          readinessProbe:
+            httpGet:
+              path: /v1/info
+              port: http
+            initialDelaySeconds: 50
+          resources:
+            {}

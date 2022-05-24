@@ -1,0 +1,35 @@
+{
+  "namespace": "test.avro",
+  "type": "record",
+  "name": "Transfer",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "profile_id",
+      "type": "long"
+    },
+    {
+      "name": "amount",
+      "type": "double"
+    },
+    {
+      "name": "transfer_time",
+      "type": "long"
+    },
+    {
+      "name": "recipient_id",
+      "type": "long"
+    },
+    {
+      "name": "from_currency",
+      "type": "string"
+    },
+    {
+      "name": "to_currency",
+      "type": "string"
+    }
+  ]
+}

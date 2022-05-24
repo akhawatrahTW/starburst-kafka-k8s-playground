@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package test;
+
+message schema {
+    int32 profile_id = 1;
+    string user_name = 2;
+}
